@@ -11,4 +11,5 @@ Saved
 *.sln
 *.suo
 *.xcodeproj
-*.xcworkspace
+*.xcworkspace 
+Content/ArchVizAssets/

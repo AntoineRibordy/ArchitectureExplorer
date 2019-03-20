@@ -27,6 +27,7 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
+	UPROPERTY(VisibleAnywhere)
 	class UCameraComponent* Camera;
 	void MoveForward(float Value);
 	void MoveRight(float Value);

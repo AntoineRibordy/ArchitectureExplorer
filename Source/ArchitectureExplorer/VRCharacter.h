@@ -29,6 +29,9 @@ public:
 private:
 	UPROPERTY(VisibleAnywhere)
 	class UCameraComponent* Camera;
+	UPROPERTY(VisibleAnywhere)
+	class USceneComponent* VRRoot;
+	
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 

@@ -3,6 +3,8 @@
 #include "VRCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "DrawDebugHelpers.h"
 
 // Sets default values
 AVRCharacter::AVRCharacter()
@@ -16,7 +18,8 @@ AVRCharacter::AVRCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(VRRoot);
 
-	
+	DestinationMarker = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DestinationMarker"));
+	DestinationMarker->SetupAttachment(GetRootComponent());
 
 }
 
@@ -24,6 +27,7 @@ AVRCharacter::AVRCharacter()
 void AVRCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	DestinationMarker->SetVisibility(false);
 }
 
 // Called every frame
@@ -34,6 +38,7 @@ void AVRCharacter::Tick(float DeltaTime)
 	CameraOffsetLocation.Z = 0;
 	AddActorWorldOffset(CameraOffsetLocation);
 	VRRoot->AddWorldOffset(-CameraOffsetLocation);
+	UpdateDestinationMarker();
 }
 
 // Called to bind functionality to input
@@ -54,3 +59,20 @@ void AVRCharacter::MoveRight(float Value)
 	AddMovementInput(Camera->GetRightVector(), Value);
 }
 
+void AVRCharacter::UpdateDestinationMarker()
+{
+	FHitResult OutHit;
+	FVector Start = Camera->GetComponentLocation();
+	FVector End = Start + MaxTeleportDistance * Camera->GetForwardVector();
+	//DrawDebugLine(GetWorld(), Start, End, FColor::Blue, false);
+	GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Visibility);
+	if (OutHit.IsValidBlockingHit())
+	{
+		DestinationMarker->SetVisibility(true);
+		DestinationMarker->SetWorldLocation(OutHit.Location);
+	}
+	else
+	{
+		DestinationMarker->SetVisibility(false);
+	}
+}

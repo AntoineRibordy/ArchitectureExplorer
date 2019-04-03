@@ -31,8 +31,12 @@ private:
 	class UCameraComponent* Camera;
 	UPROPERTY(VisibleAnywhere)
 	class USceneComponent* VRRoot;
+	UPROPERTY(VisibleAnywhere)
+	class UStaticMeshComponent* DestinationMarker;
+	UPROPERTY(EditAnywhere)
+	float MaxTeleportDistance = 2000;
 	
 	void MoveForward(float Value);
 	void MoveRight(float Value);
-
+	void UpdateDestinationMarker();
 };

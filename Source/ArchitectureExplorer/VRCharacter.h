@@ -35,8 +35,13 @@ private:
 	class UStaticMeshComponent* DestinationMarker;
 	UPROPERTY(EditAnywhere)
 	float MaxTeleportDistance = 2000;
+	UPROPERTY(EditAnywhere)
+	float TeleportFadeTime = 1.0f;
 	
 	void MoveForward(float Value);
 	void MoveRight(float Value);
+
+	void BeginTeleport();
+	void Teleport();
 	void UpdateDestinationMarker();
 };

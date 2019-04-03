@@ -4,7 +4,11 @@
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "DrawDebugHelpers.h"
+#include "TimerManager.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AVRCharacter::AVRCharacter()
@@ -45,8 +49,9 @@ void AVRCharacter::Tick(float DeltaTime)
 void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	PlayerInputComponent->BindAxis("Forward", this, &AVRCharacter::MoveForward);
-	PlayerInputComponent->BindAxis("Right", this, &AVRCharacter::MoveRight);
+	PlayerInputComponent->BindAxis(TEXT("Forward"), this, &AVRCharacter::MoveForward);
+	PlayerInputComponent->BindAxis(TEXT("Right"), this, &AVRCharacter::MoveRight);
+	PlayerInputComponent->BindAction(TEXT("Teleport"), IE_Released, this, &AVRCharacter::BeginTeleport);
 }
 
 void AVRCharacter::MoveForward(float Value)
@@ -57,6 +62,24 @@ void AVRCharacter::MoveForward(float Value)
 void AVRCharacter::MoveRight(float Value)
 {
 	AddMovementInput(Camera->GetRightVector(), Value);
+}
+
+void AVRCharacter::BeginTeleport()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController != nullptr) 
+	{
+		// Fade camera out
+		PlayerController->PlayerCameraManager->StartCameraFade(0, 1, TeleportFadeTime, FLinearColor::Black);
+	}
+	// Wait for fade to finish before teleporting
+	FTimerHandle TimerHandle;
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &AVRCharacter::Teleport, TeleportFadeTime);
+}
+
+void AVRCharacter::Teleport()
+{
+	VRRoot->SetWorldLocation(DestinationMarker->GetComponentLocation() + GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * FVector::UpVector);
 }
 
 void AVRCharacter::UpdateDestinationMarker()

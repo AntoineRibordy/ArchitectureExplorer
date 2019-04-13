@@ -9,6 +9,9 @@
 #include "TimerManager.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "NavigationSystem.h"
+#include "Components/PostProcessComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 // Sets default values
 AVRCharacter::AVRCharacter()
@@ -25,6 +28,8 @@ AVRCharacter::AVRCharacter()
 	DestinationMarker = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DestinationMarker"));
 	DestinationMarker->SetupAttachment(GetRootComponent());
 
+	PostProcessComponent = CreateDefaultSubobject<UPostProcessComponent>(TEXT("PostProcessComponent"));
+	DestinationMarker->SetupAttachment(GetRootComponent());
 }
 
 // Called when the game starts or when spawned
@@ -32,6 +37,14 @@ void AVRCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	DestinationMarker->SetVisibility(false);
+
+	if (BlinkerMaterialBase != nullptr)
+	{
+		BlinkerMaterialInstance = UMaterialInstanceDynamic::Create(BlinkerMaterialBase, this);
+		PostProcessComponent->AddOrUpdateBlendable(BlinkerMaterialInstance);
+		BlinkerMaterialInstance->SetScalarParameterValue(TEXT("BlinkerSize"), 0.25f);
+	}
+
 }
 
 // Called every frame
@@ -89,7 +102,7 @@ void AVRCharacter::UpdateDestinationMarker()
 	FVector End = Start + MaxTeleportDistance * Camera->GetForwardVector();
 	//DrawDebugLine(GetWorld(), Start, End, FColor::Blue, false);
 	GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Visibility);
-	if (OutHit.IsValidBlockingHit())
+	if (OutHit.IsValidBlockingHit() && IsValidNavMeshHit(OutHit))
 	{
 		DestinationMarker->SetVisibility(true);
 		DestinationMarker->SetWorldLocation(OutHit.Location);
@@ -98,4 +111,22 @@ void AVRCharacter::UpdateDestinationMarker()
 	{
 		DestinationMarker->SetVisibility(false);
 	}
+}
+
+bool AVRCharacter::IsValidNavMeshHit(FHitResult &OutHit)
+{
+	UNavigationSystemV1* NavMesh = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
+	FNavLocation OutLocation;
+	if (NavMesh != nullptr)
+	{
+		// Is the point we're looking at a valid navigation point on the navmesh
+		return NavMesh->ProjectPointToNavigation(OutHit.Location, OutLocation, TeleportProjectionExtent);
+	}
+	else
+	{
+		// If we don't have a nav mesh, we can't judge the validity of the hit, so return true
+		return true;
+	}
+		
+	
 }

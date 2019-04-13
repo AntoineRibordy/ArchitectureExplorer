@@ -31,12 +31,25 @@ private:
 	class UCameraComponent* Camera;
 	UPROPERTY(VisibleAnywhere)
 	class USceneComponent* VRRoot;
+	
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* DestinationMarker;
+
+	UPROPERTY(VisibleAnywhere)
+	class UPostProcessComponent* PostProcessComponent;
+
 	UPROPERTY(EditAnywhere)
 	float MaxTeleportDistance = 2000;
 	UPROPERTY(EditAnywhere)
 	float TeleportFadeTime = 1.0f;
+	UPROPERTY(EditAnywhere)
+	FVector TeleportProjectionExtent = FVector(100, 100, 100);
+
+	UPROPERTY(EditAnywhere)
+	class UMaterialInterface* BlinkerMaterialBase;
+	
+	UPROPERTY()
+	class UMaterialInstanceDynamic* BlinkerMaterialInstance;
 	
 	void MoveForward(float Value);
 	void MoveRight(float Value);
@@ -44,4 +57,5 @@ private:
 	void BeginTeleport();
 	void Teleport();
 	void UpdateDestinationMarker();
+	bool IsValidNavMeshHit(FHitResult &OutHit);
 };

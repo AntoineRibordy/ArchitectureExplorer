@@ -42,7 +42,7 @@ void AVRCharacter::BeginPlay()
 	{
 		BlinkerMaterialInstance = UMaterialInstanceDynamic::Create(BlinkerMaterialBase, this);
 		PostProcessComponent->AddOrUpdateBlendable(BlinkerMaterialInstance);
-		BlinkerMaterialInstance->SetScalarParameterValue(TEXT("BlinkerSize"), 0.25f);
+		BlinkerMaterialInstance->SetScalarParameterValue(TEXT("BlinkersSize"), 0.25f);
 	}
 
 }
@@ -56,6 +56,7 @@ void AVRCharacter::Tick(float DeltaTime)
 	AddActorWorldOffset(CameraOffsetLocation);
 	VRRoot->AddWorldOffset(-CameraOffsetLocation);
 	UpdateDestinationMarker();
+	UpdateBlinkers();
 }
 
 // Called to bind functionality to input
@@ -75,6 +76,54 @@ void AVRCharacter::MoveForward(float Value)
 void AVRCharacter::MoveRight(float Value)
 {
 	AddMovementInput(Camera->GetRightVector(), Value);
+}
+
+void AVRCharacter::UpdateBlinkers()
+{
+	if (RadiusVsVelocity == nullptr) return;
+	float Speed = GetVelocity().Size();
+	// We convert the speed in meters per second so divide by 100
+	float Radius = RadiusVsVelocity->GetFloatValue(Speed / 100);
+	BlinkerMaterialInstance->SetScalarParameterValue(TEXT("BlinkersSize"), Radius);
+
+	FVector2D Centre = GetBlinkersCentre();
+	BlinkerMaterialInstance->SetVectorParameterValue(TEXT("Centre"), FLinearColor(Centre.X,  Centre.Y, 0));
+
+	
+}
+
+FVector2D AVRCharacter::GetBlinkersCentre()
+{
+	FVector MovementDirection = GetVelocity().GetSafeNormal();
+	if (MovementDirection.IsNearlyZero())
+	{
+		return FVector2D(0.5, 0.5);
+	}
+	// If going backwards, substract movement direction from camera location
+	bool IsMovingForward = FVector::DotProduct(Camera->GetForwardVector(), MovementDirection) >= 0 ? true : false;
+	FVector WorldStationaryLocation;
+	if (IsMovingForward)
+	{
+		WorldStationaryLocation = Camera->GetComponentLocation() + MovementDirection * 1000;
+	}
+	else
+	{
+		WorldStationaryLocation = Camera->GetComponentLocation() - MovementDirection * 1000;
+	}
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController == nullptr)
+	{
+		return FVector2D(0.5, 0.5);
+	}
+
+	FVector2D ScreenStationaryLocation;
+	PlayerController->ProjectWorldLocationToScreen(WorldStationaryLocation, ScreenStationaryLocation);
+	int32 ViewportSizeX, ViewportSizeY;
+	PlayerController->GetViewportSize(ViewportSizeX, ViewportSizeY);
+	ScreenStationaryLocation.X /= ViewportSizeX;
+	ScreenStationaryLocation.Y /= ViewportSizeY;
+	return ScreenStationaryLocation;
 }
 
 void AVRCharacter::BeginTeleport()

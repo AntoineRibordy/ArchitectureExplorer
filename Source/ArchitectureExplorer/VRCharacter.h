@@ -50,6 +50,9 @@ private:
 	
 	UPROPERTY()
 	class UMaterialInstanceDynamic* BlinkerMaterialInstance;
+
+	UPROPERTY(EditAnywhere)
+	class UCurveFloat* RadiusVsVelocity;
 	
 	void MoveForward(float Value);
 	void MoveRight(float Value);
@@ -57,5 +60,9 @@ private:
 	void BeginTeleport();
 	void Teleport();
 	void UpdateDestinationMarker();
+	void UpdateBlinkers();
+
+	FVector2D GetBlinkersCentre();
+
 	bool IsValidNavMeshHit(FHitResult &OutHit);
 };

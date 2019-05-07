@@ -12,6 +12,8 @@
 #include "NavigationSystem.h"
 #include "Components/PostProcessComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "MotionControllerComponent.h"
+
 
 // Sets default values
 AVRCharacter::AVRCharacter()
@@ -24,6 +26,14 @@ AVRCharacter::AVRCharacter()
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(VRRoot);
+
+	LeftController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("LeftController"));
+	LeftController->SetupAttachment(VRRoot);
+	LeftController->SetTrackingSource(EControllerHand::Left);
+
+	RightController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightController"));
+	RightController->SetupAttachment(VRRoot);
+	RightController->SetTrackingSource(EControllerHand::Right);
 
 	DestinationMarker = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DestinationMarker"));
 	DestinationMarker->SetupAttachment(GetRootComponent());
@@ -146,9 +156,12 @@ void AVRCharacter::Teleport()
 
 void AVRCharacter::UpdateDestinationMarker()
 {
+	if (RightController == nullptr) return;
 	FHitResult OutHit;
-	FVector Start = Camera->GetComponentLocation();
-	FVector End = Start + MaxTeleportDistance * Camera->GetForwardVector();
+	FVector Start = RightController->GetComponentLocation();
+	FVector Look = RightController->GetForwardVector();
+	Look = Look.RotateAngleAxis(30, RightController->GetRightVector());
+	FVector End = Start + MaxTeleportDistance * Look;
 	//DrawDebugLine(GetWorld(), Start, End, FColor::Blue, false);
 	GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Visibility);
 	if (OutHit.IsValidBlockingHit() && IsValidNavMeshHit(OutHit))

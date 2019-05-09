@@ -161,39 +161,62 @@ void AVRCharacter::Teleport()
 
 void AVRCharacter::UpdateDestinationMarker()
 {
-	if (RightController == nullptr) return;
-	FVector Start = RightController->GetComponentLocation();
-	FVector Look = RightController->GetForwardVector();
-	//Look = Look.RotateAngleAxis(30, RightController->GetRightVector());
-	FPredictProjectilePathParams Params(
-		TeleportProjectileRadius, 
-		Start, 
-		TeleportProjectileSpeed * Look, 
-		TeleportSimulationTime, 
-		ECollisionChannel::ECC_Visibility);
-	FPredictProjectilePathResult Result;
-	Params.DrawDebugType = EDrawDebugTrace::ForOneFrame;
-	Params.bTraceComplex = true;
-	UGameplayStatics::PredictProjectilePath(RightController, Params, Result);
-	
 	//DrawDebugLine(GetWorld(), Start, End, FColor::Blue, false);
 	//GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Visibility);
-	if (Result.HitResult.IsValidBlockingHit() && IsValidNavMeshHit(Result.HitResult))
+	TArray<FVector> Path;
+	FVector Location;
+	bool bHasDestination = FindTeleportDestination(Path, Location);
+	if (bHasDestination)//Result.HitResult.IsValidBlockingHit())
 	{
-		TeleportPath->ClearSplinePoints(false);
-		for (int Index = 0; Index < Result.PathData.Num(); ++Index)
-		{
-			FVector LocalPosition = TeleportPath->GetComponentTransform().InverseTransformPosition(Result.PathData[Index].Location);
-			TeleportPath->AddPoint(FSplinePoint(Index,LocalPosition, ESplinePointType::Curve),false);
-		}
-		TeleportPath->UpdateSpline();
 		DestinationMarker->SetVisibility(true);
-		DestinationMarker->SetWorldLocation(Result.HitResult.Location);
+		DestinationMarker->SetWorldLocation(Location);
+		UpdateSpline(Path);
 	}
 	else
 	{
 		DestinationMarker->SetVisibility(false);
 	}
+}
+
+bool AVRCharacter::FindTeleportDestination(TArray<FVector> &OutPath, FVector& OutLocation)
+{
+	if (RightController == nullptr) return false;
+	FVector Start = RightController->GetComponentLocation();
+	FVector Look = RightController->GetForwardVector();
+	//Look = Look.RotateAngleAxis(30, RightController->GetRightVector());
+	FPredictProjectilePathParams Params(
+		TeleportProjectileRadius,
+		Start,
+		TeleportProjectileSpeed * Look,
+		TeleportSimulationTime,
+		ECollisionChannel::ECC_Visibility);
+	FPredictProjectilePathResult Result;
+	Params.DrawDebugType = EDrawDebugTrace::ForOneFrame;
+	Params.bTraceComplex = true;
+	bool bHit = UGameplayStatics::PredictProjectilePath(RightController, Params, Result);
+
+	if (!bHit) return false;
+
+	for (FPredictProjectilePathPointData PointData : Result.PathData)
+	{
+		OutPath.Add(PointData.Location);
+	}
+
+	return IsValidNavMeshHit(Result.HitResult);
+
+}
+
+void AVRCharacter::UpdateSpline(const TArray<FVector>& Path)
+{
+	TeleportPath->ClearSplinePoints(false);
+
+	for (int Index = 0; Index <Path.Num(); ++Index)
+	{
+		FVector LocalPosition = TeleportPath->GetComponentTransform().InverseTransformPosition(Path[Index]);
+		TeleportPath->AddPoint(FSplinePoint(Index, LocalPosition, ESplinePointType::Curve), false);
+	}
+
+	TeleportPath->UpdateSpline();
 }
 
 bool AVRCharacter::IsValidNavMeshHit(FHitResult &OutHit)
@@ -210,6 +233,4 @@ bool AVRCharacter::IsValidNavMeshHit(FHitResult &OutHit)
 		// If we don't have a nav mesh, we can't judge the validity of the hit, so return true
 		return true;
 	}
-		
-	
 }

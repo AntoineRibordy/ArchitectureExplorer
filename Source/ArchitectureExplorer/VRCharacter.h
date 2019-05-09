@@ -73,6 +73,8 @@ private:
 	void BeginTeleport();
 	void Teleport();
 	void UpdateDestinationMarker();
+	bool FindTeleportDestination(TArray<FVector> &OutPath, FVector& OutLocation);
+	void UpdateSpline(const TArray<FVector>& Path);
 	void UpdateBlinkers();
 
 	FVector2D GetBlinkersCentre();

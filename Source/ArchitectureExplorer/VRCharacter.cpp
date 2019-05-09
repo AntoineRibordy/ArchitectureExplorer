@@ -13,6 +13,8 @@
 #include "Components/PostProcessComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "MotionControllerComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/SplineComponent.h"
 
 
 // Sets default values
@@ -34,6 +36,9 @@ AVRCharacter::AVRCharacter()
 	RightController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightController"));
 	RightController->SetupAttachment(VRRoot);
 	RightController->SetTrackingSource(EControllerHand::Right);
+	
+	TeleportPath = CreateDefaultSubobject<USplineComponent>(TEXT("TeleportPath"));
+	TeleportPath->SetupAttachment(RightController);
 
 	DestinationMarker = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DestinationMarker"));
 	DestinationMarker->SetupAttachment(GetRootComponent());
@@ -157,17 +162,33 @@ void AVRCharacter::Teleport()
 void AVRCharacter::UpdateDestinationMarker()
 {
 	if (RightController == nullptr) return;
-	FHitResult OutHit;
 	FVector Start = RightController->GetComponentLocation();
 	FVector Look = RightController->GetForwardVector();
-	Look = Look.RotateAngleAxis(30, RightController->GetRightVector());
-	FVector End = Start + MaxTeleportDistance * Look;
+	//Look = Look.RotateAngleAxis(30, RightController->GetRightVector());
+	FPredictProjectilePathParams Params(
+		TeleportProjectileRadius, 
+		Start, 
+		TeleportProjectileSpeed * Look, 
+		TeleportSimulationTime, 
+		ECollisionChannel::ECC_Visibility);
+	FPredictProjectilePathResult Result;
+	Params.DrawDebugType = EDrawDebugTrace::ForOneFrame;
+	Params.bTraceComplex = true;
+	UGameplayStatics::PredictProjectilePath(RightController, Params, Result);
+	
 	//DrawDebugLine(GetWorld(), Start, End, FColor::Blue, false);
-	GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Visibility);
-	if (OutHit.IsValidBlockingHit() && IsValidNavMeshHit(OutHit))
+	//GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Visibility);
+	if (Result.HitResult.IsValidBlockingHit() && IsValidNavMeshHit(Result.HitResult))
 	{
+		TeleportPath->ClearSplinePoints(false);
+		for (int Index = 0; Index < Result.PathData.Num(); ++Index)
+		{
+			FVector LocalPosition = TeleportPath->GetComponentTransform().InverseTransformPosition(Result.PathData[Index].Location);
+			TeleportPath->AddPoint(FSplinePoint(Index,LocalPosition, ESplinePointType::Curve),false);
+		}
+		TeleportPath->UpdateSpline();
 		DestinationMarker->SetVisibility(true);
-		DestinationMarker->SetWorldLocation(OutHit.Location);
+		DestinationMarker->SetWorldLocation(Result.HitResult.Location);
 	}
 	else
 	{

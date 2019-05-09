@@ -36,6 +36,9 @@ private:
 	class UCameraComponent* Camera;
 	UPROPERTY(VisibleAnywhere)
 	class USceneComponent* VRRoot;
+
+	UPROPERTY(VisibleAnywhere)
+	class USplineComponent* TeleportPath;
 	
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* DestinationMarker;
@@ -44,7 +47,12 @@ private:
 	class UPostProcessComponent* PostProcessComponent;
 
 	UPROPERTY(EditAnywhere)
-	float MaxTeleportDistance = 2000;
+	float TeleportProjectileRadius = 10;
+	UPROPERTY(EditAnywhere)
+	float TeleportProjectileSpeed = 800;
+	UPROPERTY(EditAnywhere)
+	float TeleportSimulationTime = 1;
+
 	UPROPERTY(EditAnywhere)
 	float TeleportFadeTime = 1.0f;
 	UPROPERTY(EditAnywhere)

@@ -46,6 +46,12 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	class UPostProcessComponent* PostProcessComponent;
 
+	UPROPERTY()
+	class UMaterialInstanceDynamic* BlinkerMaterialInstance;
+
+	UPROPERTY()
+	TArray<class USplineMeshComponent*> TeleportPathMeshPool;
+
 	UPROPERTY(EditAnywhere)
 	float TeleportProjectileRadius = 10;
 	UPROPERTY(EditAnywhere)
@@ -60,12 +66,16 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	class UMaterialInterface* BlinkerMaterialBase;
-	
-	UPROPERTY()
-	class UMaterialInstanceDynamic* BlinkerMaterialInstance;
+
 
 	UPROPERTY(EditAnywhere)
 	class UCurveFloat* RadiusVsVelocity;
+
+	UPROPERTY(EditDefaultsOnly)
+	class UStaticMesh* TeleportArchMesh;
+
+	UPROPERTY(EditDefaultsOnly)
+	class UMaterialInterface* TeleportArchMaterial;
 	
 	void MoveForward(float Value);
 	void MoveRight(float Value);
@@ -74,10 +84,13 @@ private:
 	void Teleport();
 	void UpdateDestinationMarker();
 	bool FindTeleportDestination(TArray<FVector> &OutPath, FVector& OutLocation);
+	void DrawTeleportPath(TArray<FVector>& Path);
 	void UpdateSpline(const TArray<FVector>& Path);
 	void UpdateBlinkers();
 
 	FVector2D GetBlinkersCentre();
 
-	bool IsValidNavMeshHit(FHitResult &OutHit);
+	bool IsValidNavMeshHit(FHitResult &OutHit, FVector& OutLocation);
+
+	
 };

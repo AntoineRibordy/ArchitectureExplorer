@@ -15,6 +15,7 @@
 #include "MotionControllerComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/SplineComponent.h"
+#include "Components/SplineMeshComponent.h"
 
 
 // Sets default values
@@ -59,7 +60,6 @@ void AVRCharacter::BeginPlay()
 		PostProcessComponent->AddOrUpdateBlendable(BlinkerMaterialInstance);
 		BlinkerMaterialInstance->SetScalarParameterValue(TEXT("BlinkersSize"), 0.25f);
 	}
-
 }
 
 // Called every frame
@@ -166,15 +166,18 @@ void AVRCharacter::UpdateDestinationMarker()
 	TArray<FVector> Path;
 	FVector Location;
 	bool bHasDestination = FindTeleportDestination(Path, Location);
+
 	if (bHasDestination)//Result.HitResult.IsValidBlockingHit())
 	{
 		DestinationMarker->SetVisibility(true);
 		DestinationMarker->SetWorldLocation(Location);
-		UpdateSpline(Path);
+		DrawTeleportPath(Path);
 	}
 	else
 	{
 		DestinationMarker->SetVisibility(false);
+		TArray<FVector> EmptyPath;
+		DrawTeleportPath(EmptyPath);
 	}
 }
 
@@ -189,11 +192,12 @@ bool AVRCharacter::FindTeleportDestination(TArray<FVector> &OutPath, FVector& Ou
 		Start,
 		TeleportProjectileSpeed * Look,
 		TeleportSimulationTime,
-		ECollisionChannel::ECC_Visibility);
-	FPredictProjectilePathResult Result;
-	Params.DrawDebugType = EDrawDebugTrace::ForOneFrame;
+		ECollisionChannel::ECC_Visibility,
+		this);
+	//Params.DrawDebugType = EDrawDebugTrace::ForOneFrame;
 	Params.bTraceComplex = true;
-	bool bHit = UGameplayStatics::PredictProjectilePath(RightController, Params, Result);
+	FPredictProjectilePathResult Result;
+	bool bHit = UGameplayStatics::PredictProjectilePath(this, Params, Result);
 
 	if (!bHit) return false;
 
@@ -202,8 +206,42 @@ bool AVRCharacter::FindTeleportDestination(TArray<FVector> &OutPath, FVector& Ou
 		OutPath.Add(PointData.Location);
 	}
 
-	return IsValidNavMeshHit(Result.HitResult);
+	return IsValidNavMeshHit(Result.HitResult, OutLocation);
 
+}
+
+void AVRCharacter::DrawTeleportPath(TArray<FVector>& Path)
+{
+	UpdateSpline(Path);
+
+	for (USplineMeshComponent* SplineMesh : TeleportPathMeshPool)
+	{
+		SplineMesh->SetVisibility(false);
+	}
+	for (int Index = 0; Index < Path.Num(); ++Index)
+	{
+		if (TeleportPathMeshPool.Num() <= Index)
+		{
+			USplineMeshComponent* SplineMesh = NewObject<USplineMeshComponent>(this);
+			SplineMesh->SetMobility(EComponentMobility::Movable);
+			SplineMesh->SetStaticMesh(TeleportArchMesh);
+			SplineMesh->SetMaterial(0, TeleportArchMaterial);
+			SplineMesh->AttachToComponent(TeleportPath, FAttachmentTransformRules::KeepRelativeTransform);
+			// You need to register the component when it's not created in the constructor
+			SplineMesh->RegisterComponent();
+			TeleportPathMeshPool.Add(SplineMesh);
+		}
+
+		if (Index + 1 < Path.Num())
+		{
+			FVector StartLocation, StartTangent, EndLocation, EndTangent;
+			TeleportPath->GetLocalLocationAndTangentAtSplinePoint(Index, StartLocation, StartTangent);
+			TeleportPath->GetLocalLocationAndTangentAtSplinePoint(Index+1, EndLocation, EndTangent);
+			TeleportPathMeshPool[Index]->SetStartAndEnd(StartLocation, StartTangent, EndLocation, EndTangent);
+			TeleportPathMeshPool[Index]->SetVisibility(true);
+		}
+		
+	}
 }
 
 void AVRCharacter::UpdateSpline(const TArray<FVector>& Path)
@@ -214,23 +252,26 @@ void AVRCharacter::UpdateSpline(const TArray<FVector>& Path)
 	{
 		FVector LocalPosition = TeleportPath->GetComponentTransform().InverseTransformPosition(Path[Index]);
 		TeleportPath->AddPoint(FSplinePoint(Index, LocalPosition, ESplinePointType::Curve), false);
+		
 	}
-
 	TeleportPath->UpdateSpline();
 }
 
-bool AVRCharacter::IsValidNavMeshHit(FHitResult &OutHit)
+bool AVRCharacter::IsValidNavMeshHit(FHitResult &OutHit, FVector &OutLocation)
 {
 	UNavigationSystemV1* NavMesh = Cast<UNavigationSystemV1>(GetWorld()->GetNavigationSystem());
-	FNavLocation OutLocation;
+	FNavLocation NavLocation;
 	if (NavMesh != nullptr)
 	{
 		// Is the point we're looking at a valid navigation point on the navmesh
-		return NavMesh->ProjectPointToNavigation(OutHit.Location, OutLocation, TeleportProjectionExtent);
+		bool bOnNavMesh = NavMesh->ProjectPointToNavigation(OutHit.Location, NavLocation, TeleportProjectionExtent);
+		OutLocation = NavLocation.Location;
+		return bOnNavMesh;
 	}
 	else
 	{
 		// If we don't have a nav mesh, we can't judge the validity of the hit, so return true
+		OutLocation = OutHit.Location;
 		return true;
 	}
 }

@@ -27,10 +27,11 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
+	// Configuration Parameters
 	UPROPERTY(VisibleAnywhere)
-	class UMotionControllerComponent* LeftController;
+	class AHandController* LeftController;
 	UPROPERTY(VisibleAnywhere)
-	class UMotionControllerComponent* RightController;
+	class AHandController* RightController;
 
 	UPROPERTY(VisibleAnywhere)
 	class UCameraComponent* Camera;
@@ -76,7 +77,11 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	class UMaterialInterface* TeleportArchMaterial;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<AHandController> HandControllerClass;
 	
+private:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 

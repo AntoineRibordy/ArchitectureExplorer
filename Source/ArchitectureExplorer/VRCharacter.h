@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "HandController.h"
 #include "VRCharacter.generated.h"
 
 UCLASS()
@@ -29,9 +30,9 @@ public:
 private:
 	// Configuration Parameters
 	UPROPERTY(VisibleAnywhere)
-	class AHandController* LeftController;
+	AHandController* LeftController;
 	UPROPERTY(VisibleAnywhere)
-	class AHandController* RightController;
+	AHandController* RightController;
 
 	UPROPERTY(VisibleAnywhere)
 	class UCameraComponent* Camera;
@@ -84,6 +85,11 @@ private:
 private:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
+
+	void GripLeft() { LeftController->Grip(); }
+	void ReleaseLeft() { LeftController->Release(); }
+	void GripRight() { RightController->Grip(); }
+	void ReleaseRight() { RightController->Release(); }
 
 	void BeginTeleport();
 	void Teleport();

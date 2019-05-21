@@ -18,6 +18,13 @@ public:
 	AHandController();
 
 	void SetHand(EControllerHand Hand) { MotionController->SetTrackingSource(Hand); }
+	void PairController(AHandController* Controller);
+
+	void Grip();
+	void Release();
+
+	// State
+	bool bIsClimbing = false;
 
 protected:
 	// Called when the game starts or when spawned
@@ -35,7 +42,6 @@ private:
 	void ActorEndOverlap(AActor* OverlappedActor, AActor* OtherActor);
 
 	// Helpers
-
 	bool CanClimb() const;
 
 	// Default sub object
@@ -46,7 +52,12 @@ private:
 	// State
 	bool bCanClimb = false;
 
-	UPROPERTY(EditAnywhere)
+	FVector ClimbingStartLocation;
+
+	// Parameters
+	UPROPERTY(EditDefaultsOnly)
 	class UHapticFeedbackEffect_Base* HapticEffect;
+
+	AHandController* OtherController;
 
 };

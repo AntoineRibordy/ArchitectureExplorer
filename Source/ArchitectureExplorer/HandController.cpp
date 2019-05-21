@@ -1,13 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "GameFramework/PlayerController.h"
-
 #include "HandController.h"
+#include "VRCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 
 // Sets default values
 AHandController::AHandController()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	MotionController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("MotionController"));
@@ -21,7 +22,18 @@ void AHandController::BeginPlay()
 	Super::BeginPlay();
 	OnActorBeginOverlap.AddDynamic(this, &AHandController::ActorBeginOverlap);
 	OnActorEndOverlap.AddDynamic(this, &AHandController::ActorEndOverlap);
-	
+
+}
+
+// Called every frame
+void AHandController::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	if (bIsClimbing)
+	{
+		FVector HandControllerDelta = GetActorLocation() - ClimbingStartLocation;
+		GetAttachParentActor()->AddActorWorldOffset(-HandControllerDelta);
+	}
 }
 
 void AHandController::ActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
@@ -62,11 +74,41 @@ bool AHandController::CanClimb() const
 	return false;
 }
 
-
-// Called every frame
-void AHandController::Tick(float DeltaTime)
+void AHandController::Grip()
 {
-	Super::Tick(DeltaTime);
+	if (bCanClimb)
+	{
+		if (!bIsClimbing)
+		{
+			bIsClimbing = true;
+			OtherController->bIsClimbing = false;
+			ClimbingStartLocation = GetActorLocation();
 
+			ACharacter* Character = Cast<ACharacter>(GetAttachParentActor());
+			if (Character != nullptr)
+			{
+				Character->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+			}
+		}
+	}
+	
 }
 
+void AHandController::Release()
+{
+	if (bIsClimbing)
+	{
+		bIsClimbing = false;
+		ACharacter* Character = Cast<ACharacter>(GetAttachParentActor());
+		if (Character != nullptr)
+		{
+			Character->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+		}
+	}
+		
+}
+
+void AHandController::PairController(AHandController* Controller)
+{
+	OtherController = Controller;
+}
